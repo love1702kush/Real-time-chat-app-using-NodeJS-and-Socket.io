@@ -1,4 +1,5 @@
 ## HTML
+index.html
 
 <!DOCTYPE html>
 <html lang="en">
@@ -25,6 +26,7 @@
 
 
 ## CSS:
+styles.css
 
 body {
   font-family: Arial, sans-serif;
@@ -79,6 +81,7 @@ body {
 
 
 ## JS:
+script.js
 
 const socket = io();
 
