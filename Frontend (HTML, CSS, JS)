@@ -1,0 +1,127 @@
+## HTML
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Chat</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="chat-container">
+    <div id="messages"></div>
+    <input id="messageInput" type="text" placeholder="Type a message...">
+    <button id="sendButton">Send</button>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+## CSS:
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f9f9f9;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.chat-container {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  width: 400px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#messages {
+  height: 300px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+}
+
+#messageInput {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+#sendButton {
+  padding: 10px;
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#sendButton:hover {
+  background-color: #0056b3;
+}
+
+
+
+
+## JS:
+
+const socket = io();
+
+// DOM elements
+const messagesDiv = document.getElementById('messages');
+const messageInput = document.getElementById('messageInput');
+const sendButton = document.getElementById('sendButton');
+
+// Append messages to the chat
+const appendMessage = (message, type = 'message') => {
+  const div = document.createElement('div');
+  div.textContent = message;
+  div.className = type;
+  messagesDiv.appendChild(div);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+};
+
+// Fetch previous messages
+socket.on('previousMessages', messages => {
+  messages.forEach(msg => appendMessage(`${msg.sender}: ${msg.text}`, 'message'));
+});
+
+// Handle new message
+socket.on('newMessage', msg => {
+  appendMessage(`${msg.sender}: ${msg.text}`, 'message');
+});
+
+// Handle user events
+socket.on('userEvent', event => {
+  appendMessage(event, 'event');
+});
+
+// Send message
+sendButton.addEventListener('click', () => {
+  const text = messageInput.value.trim();
+  if (text) {
+    socket.emit('sendMessage', { text });
+    appendMessage(`You: ${text}`, 'message');
+    messageInput.value = '';
+  }
+});
+
+messageInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendButton.click();
+});
+
