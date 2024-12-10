@@ -1,0 +1,57 @@
+## server.js
+
+
+require('dotenv').config();
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const { MongoClient } = require('mongodb');
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+const PORT = process.env.PORT || 3000;
+const DB_URI = process.env.DB_URI; // MongoDB connection string
+
+// Middleware for serving static files
+app.use(express.static('public'));
+
+// MongoDB connection setup
+let db, messagesCollection;
+
+MongoClient.connect(DB_URI, { useUnifiedTopology: true })
+  .then(client => {
+    console.log('Connected to MongoDB');
+    db = client.db('chatApp');
+    messagesCollection = db.collection('messages');
+  })
+  .catch(err => console.error(err));
+
+// Real-time communication
+io.on('connection', socket => {
+  console.log('A user connected:', socket.id);
+
+  // Fetch and emit previous messages
+  messagesCollection.find().toArray()
+    .then(messages => socket.emit('previousMessages', messages));
+
+  // Broadcast join event
+  socket.broadcast.emit('userEvent', `${socket.id} joined the chat`);
+
+  // Handle incoming messages
+  socket.on('sendMessage', message => {
+    const msg = { text: message.text, sender: socket.id, timestamp: new Date() };
+    messagesCollection.insertOne(msg)
+      .then(() => io.emit('newMessage', msg))
+      .catch(err => console.error(err));
+  });
+
+  // Broadcast leave event on disconnect
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+    socket.broadcast.emit('userEvent', `${socket.id} left the chat`);
+  });
+});
+
+server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
